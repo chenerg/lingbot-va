@@ -109,6 +109,18 @@ We also provide a script for image to video-action generation:
 NGPU=1 CONFIG_NAME='robotwin_i2av' bash script/run_launch_va_server_sync.sh 
 ```
 
+### KV Cache Notes (`compute_kv_cache`)
+
+In server mode, `compute_kv_cache=True` stores **real observations** (image + state) into the transformer's attention KV cache before autoregressive prediction.
+
+- The server encodes observation images to video latents via VAE (`_encode_obs`) and normalizes state into action tokens (`preprocess_action`).
+- Both video and action branches are forwarded once with `update_cache=2`, which writes this chunk into persistent cache entries.
+- This is **chunk-wise caching** (not denoising-step-wise caching): each call stores all frames in the provided chunk at once.
+- Cache size is bounded by `attn_window`; when full, oldest slots are evicted (sliding-window behavior).
+
+Useful intuition:
+- `frame_chunk_size`: frames per inference/caching chunk.
+- `attn_window`: the history window used to pre-allocate cache capacity for both video/action token streams.
 
 
 ---
